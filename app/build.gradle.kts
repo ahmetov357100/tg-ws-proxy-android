@@ -10,7 +10,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.amurcanov.tgwsproxy"
+        applicationId = "com.ahmetov357100.tgvpsproxy"
         targetSdk = 35
         versionCode = 123
         versionName = "1.2.3"

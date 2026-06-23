@@ -43,9 +43,9 @@ class ProxyService : Service() {
     private var lastSecretKey: String = ""
 
     companion object {
-        const val ACTION_START = "com.amurcanov.tgwsproxy.START"
-        const val ACTION_STOP = "com.amurcanov.tgwsproxy.STOP"
-        const val ACTION_RESTART = "com.amurcanov.tgwsproxy.RESTART"
+        const val ACTION_START = "com.ahmetov357100.tgvpsproxy.START"
+        const val ACTION_STOP = "com.ahmetov357100.tgvpsproxy.STOP"
+        const val ACTION_RESTART = "com.ahmetov357100.tgvpsproxy.RESTART"
         const val EXTRA_BIND_IP = "EXTRA_BIND_IP"
         const val EXTRA_PORT = "EXTRA_PORT"
         const val EXTRA_IPS = "EXTRA_IPS"
@@ -56,7 +56,7 @@ class ProxyService : Service() {
         const val EXTRA_SECRET_KEY = "EXTRA_SECRET_KEY"
         
         private const val NOTIFICATION_ID = 101
-        private const val CHANNEL_ID = "TG_WS_Proxy_Service_v4"
+        private const val CHANNEL_ID = "TG_VPS_Proxy_Service_v1"
         private const val TAG = "ProxyService"
 
         // Wakelock refresh interval (25 min, re-acquire before 30-min timeout)

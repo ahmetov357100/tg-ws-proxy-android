@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Telegram WS Proxy</string>
+    <string name="app_name">Telegram VPS Proxy</string>
     <string name="status_connecting">Connecting</string>
     <string name="status_connected">Connected</string>
     <string name="status_disconnected">Disconnected</string>
