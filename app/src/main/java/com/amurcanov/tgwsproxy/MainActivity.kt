@@ -71,6 +71,8 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.PI
 import kotlin.math.abs
@@ -595,6 +597,7 @@ object LogManager {
     private var job: Job? = null
     private var logcatProcess: Process? = null
     private val nextKey = AtomicLong(0)
+    private val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
 
     // Buffered channel — absorbs bursts of log lines without blocking the reader
     private val logChannel = Channel<LogEntry>(capacity = BUFFERED)
@@ -745,6 +748,7 @@ object LogManager {
 
         return LogEntry(
             key = "log_${nextKey.getAndIncrement()}",
+            time = timeFormat.format(Date()),
             message = message,
             count = 1,
             isError = isError,

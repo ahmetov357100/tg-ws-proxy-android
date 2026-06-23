@@ -9,6 +9,7 @@ import androidx.compose.runtime.Immutable
 @Immutable
 data class LogEntry(
     val key: String,
+    val time: String,
     val message: String,
     val count: Int,
     val isError: Boolean,

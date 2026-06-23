@@ -32,6 +32,7 @@
     <string name="proxy_port">Port</string>
     <string name="proxy_username">Username</string>
     <string name="proxy_password">Password</string>
+    <string name="stop_proxy_to_edit_proxy_servers">Stop the proxy to edit the proxy server list.</string>
     <string name="secret_key">Secret key</string>
     <string name="autostart">Autostart</string>
     <string name="dc_addresses">Data center addresses</string>

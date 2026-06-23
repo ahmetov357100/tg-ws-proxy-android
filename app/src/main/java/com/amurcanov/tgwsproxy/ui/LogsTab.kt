@@ -51,6 +51,7 @@ fun LogsTab(settingsStore: SettingsStore) {
         if (savedNull) {
             listOf(LogEntry(
                 key = "null_msg",
+                time = "",
                 message = nullLogsDisabled,
                 count = 1,
                 isError = false,
@@ -99,7 +100,10 @@ fun LogsTab(settingsStore: SettingsStore) {
                     Icon(Icons.Default.Delete, contentDescription = stringResource(com.amurcanov.tgwsproxy.R.string.clear), tint = MaterialTheme.colorScheme.primary)
                 }
                 IconButton(onClick = {
-                    val text = filteredLogs.joinToString("\n") { "${it.message} (x${it.count})" }
+                    val text = filteredLogs.joinToString("\n") {
+                        val prefix = if (it.time.isNotBlank()) "${it.time} " else ""
+                        "$prefix${it.message} (x${it.count})"
+                    }
                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     val clip = ClipData.newPlainText("TgWsProxy Logs", text)
                     clipboard.setPrimaryClip(clip)
@@ -230,6 +234,17 @@ private fun LogLine(entry: LogEntry) {
         )
         
         Spacer(modifier = Modifier.width(6.dp))
+
+        if (entry.time.isNotBlank()) {
+            Text(
+                text = entry.time,
+                color = AppColors.terminalBlue.copy(alpha = 0.9f),
+                fontSize = 11.sp,
+                fontFamily = FontFamily.Monospace,
+                modifier = Modifier.width(56.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+        }
 
         Text(
             text = entry.message,

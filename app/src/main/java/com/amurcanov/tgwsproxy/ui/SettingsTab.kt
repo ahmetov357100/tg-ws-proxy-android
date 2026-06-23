@@ -357,6 +357,13 @@ fun SettingsTab(settingsStore: SettingsStore) {
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(com.amurcanov.tgwsproxy.R.string.configure_proxy_servers), fontWeight = FontWeight.SemiBold)
                 }
+                if (isRunning) {
+                    Text(
+                        stringResource(com.amurcanov.tgwsproxy.R.string.stop_proxy_to_edit_proxy_servers),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
