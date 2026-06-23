@@ -85,3 +85,4 @@ Telegram Android → Локальный MTProto (по умолчанию 127.0.0
 ## Лицензия
 
 Этот форк распространяется под лицензией **GPLv3**. Оригинальный код `tg-ws-proxy` от [Flowseal](https://github.com/Flowseal) доступен под лицензией **MIT**.
+Оригинальный android-клиент: https://github.com/amurcanov/tg-ws-proxy-android доступен под лицензией **GPLv3**
