@@ -92,6 +92,7 @@ fun SettingsTab(settingsStore: SettingsStore) {
     val savedPort by settingsStore.port.collectAsStateWithLifecycle(initialValue = "1443")
     val savedBindIp by settingsStore.bindIp.collectAsStateWithLifecycle(initialValue = "127.0.0.1")
     val savedPoolSize by settingsStore.poolSize.collectAsStateWithLifecycle(initialValue = 4)
+    val savedTransportMode by settingsStore.transportMode.collectAsStateWithLifecycle(initialValue = "default")
     val savedCfEnabled by settingsStore.cfproxyEnabled.collectAsStateWithLifecycle(initialValue = true)
     val savedCustomDomainEnabled by settingsStore.customCfDomainEnabled.collectAsStateWithLifecycle(initialValue = false)
     val savedCustomDomain by settingsStore.customCfDomain.collectAsStateWithLifecycle(initialValue = "")
@@ -128,6 +129,7 @@ fun SettingsTab(settingsStore: SettingsStore) {
     var portText by rememberSaveable(savedPort) { mutableStateOf(savedPort) }
     var bindIpText by rememberSaveable(savedBindIp) { mutableStateOf(savedBindIp) }
     var selectedPoolSize by rememberSaveable(savedPoolSize) { mutableIntStateOf(savedPoolSize) }
+    var transportMode by rememberSaveable(savedTransportMode) { mutableStateOf(savedTransportMode) }
     var cfEnabled by rememberSaveable(savedCfEnabled) { mutableStateOf(savedCfEnabled) }
     var customCfDomainEnabled by rememberSaveable(savedCustomDomainEnabled) { mutableStateOf(savedCustomDomainEnabled) }
     var customCfDomain by rememberSaveable(savedCustomDomain) { mutableStateOf(savedCustomDomain) }
@@ -158,6 +160,7 @@ fun SettingsTab(settingsStore: SettingsStore) {
                 isDcAuto, dc1Text, dc2Text, dc3Text, dc4Text, dc5Text, dc203Text,
                 dc1mText, dc2mText, dc3mText, dc4mText, dc5mText, dc203mText,
                 experimentalMode, bindIpText, portText, selectedPoolSize,
+                transportMode,
                 cfEnabled, customCfDomainEnabled, customCfDomain,
                 RuntimeConfig.encodeProxyList(httpProxyEntries), secretKeyText
             )
@@ -314,6 +317,60 @@ fun SettingsTab(settingsStore: SettingsStore) {
                         Text(stringResource(com.amurcanov.tgwsproxy.R.string.configure_dc_addresses), fontWeight = FontWeight.SemiBold)
                     }
                 }
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.Storage, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Text(
+                        stringResource(com.amurcanov.tgwsproxy.R.string.transport_mode),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    PoolChip(
+                        label = stringResource(com.amurcanov.tgwsproxy.R.string.transport_mode_original_short),
+                        selected = transportMode == "default",
+                        enabled = !isRunning,
+                        modifier = Modifier.weight(1f).height(48.dp)
+                    ) {
+                        transportMode = "default"
+                        scheduleSave()
+                    }
+                    PoolChip(
+                        label = stringResource(com.amurcanov.tgwsproxy.R.string.transport_mode_proxy_first_short),
+                        selected = transportMode == "http_proxy_first",
+                        enabled = !isRunning,
+                        modifier = Modifier.weight(1f).height(48.dp)
+                    ) {
+                        transportMode = "http_proxy_first"
+                        scheduleSave()
+                    }
+                    PoolChip(
+                        label = stringResource(com.amurcanov.tgwsproxy.R.string.transport_mode_proxy_only_short),
+                        selected = transportMode == "http_proxy_only",
+                        enabled = !isRunning,
+                        modifier = Modifier.weight(1f).height(48.dp)
+                    ) {
+                        transportMode = "http_proxy_only"
+                        scheduleSave()
+                    }
+                }
+                Text(
+                    stringResource(com.amurcanov.tgwsproxy.R.string.transport_mode_summary),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))

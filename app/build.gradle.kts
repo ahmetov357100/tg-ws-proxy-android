@@ -12,8 +12,8 @@ android {
     defaultConfig {
         applicationId = "com.ahmetov357100.tgvpsproxy"
         targetSdk = 35
-        versionCode = 124
-        versionName = "1.2.4"
+        versionCode = 125
+        versionName = "1.2.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

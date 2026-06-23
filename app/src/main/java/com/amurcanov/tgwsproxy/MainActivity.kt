@@ -594,6 +594,7 @@ private fun AppBackdrop(modifier: Modifier = Modifier) {
  */
 object LogManager {
     val logs = MutableStateFlow<List<LogEntry>>(emptyList())
+    val currentRoute = MutableStateFlow("Unknown")
     private var job: Job? = null
     private var logcatProcess: Process? = null
     private val nextKey = AtomicLong(0)
@@ -644,6 +645,7 @@ object LogManager {
                     if (pendingBatch.isNotEmpty()) {
                         // Apply batch to state — single list mutation
                         logs.value = applyBatch(logs.value, pendingBatch)
+                        currentRoute.value = updateRoute(currentRoute.value, pendingBatch)
                         pendingBatch.clear()
                     }
 
@@ -692,6 +694,27 @@ object LogManager {
 
     fun clearLogs() {
         logs.value = emptyList()
+        currentRoute.value = "Unknown"
+    }
+
+    private fun updateRoute(current: String, batch: List<LogEntry>): String {
+        var route = current
+        for (entry in batch) {
+            val msg = entry.message
+            when {
+                msg.contains("connected via HTTP proxy ", ignoreCase = true) -> {
+                    val name = msg.substringAfter("connected via HTTP proxy ", "").trim()
+                    route = if (name.isNotEmpty()) "VPS: $name" else "VPS"
+                }
+                msg.contains("подключен через CF", ignoreCase = true) -> {
+                    route = "CF"
+                }
+                msg.contains("подключен по TCP", ignoreCase = true) -> {
+                    route = "Direct"
+                }
+            }
+        }
+        return route
     }
 
     private fun parseLine(raw: String): LogEntry? {

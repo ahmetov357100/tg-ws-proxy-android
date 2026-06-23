@@ -58,15 +58,26 @@ object RuntimeConfig {
         return arr.toString()
     }
 
+    fun effectiveTransportMode(selectedMode: String, proxies: List<HttpProxyEntry>): String {
+        val hasEnabledProxy = proxies.any { it.enabled && it.host.isNotBlank() && it.port > 0 }
+        val normalized = selectedMode.trim().lowercase()
+        return when {
+            !hasEnabledProxy -> "default"
+            normalized == "http_proxy_only" -> "http_proxy_only"
+            normalized == "http_proxy_first" -> "http_proxy_first"
+            else -> "default"
+        }
+    }
+
     fun ensureConfigFile(context: Context, settingsStore: SettingsStore): File {
         val configFile = File(context.filesDir, FILE_NAME)
         val runtimeJson = runBlocking {
             settingsStore.migrateLegacyDefaults()
             val proxies = parseProxyList(settingsStore.httpProxyListJson.first())
-            val hasEnabledProxy = proxies.any { it.enabled && it.host.isNotBlank() && it.port > 0 }
+            val transportMode = effectiveTransportMode(settingsStore.transportMode.first(), proxies)
 
             JSONObject()
-                .put("transport_mode", if (hasEnabledProxy) "http_proxy_first" else "default")
+                .put("transport_mode", transportMode)
                 .put("http_proxies", JSONArray(encodeProxyList(proxies)))
                 .toString(2)
         }

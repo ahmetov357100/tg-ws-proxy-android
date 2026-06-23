@@ -137,4 +137,11 @@
     <string name="proxy_username">Логин</string>
     <string name="proxy_password">Пароль</string>
     <string name="stop_proxy_to_edit_proxy_servers">Остановите proxy, чтобы редактировать список proxy серверов.</string>
+    <string name="transport_mode">Режим маршрута</string>
+    <string name="transport_mode_original_short">Исходный</string>
+    <string name="transport_mode_proxy_first_short">Proxy first</string>
+    <string name="transport_mode_proxy_only_short">Proxy only</string>
+    <string name="transport_mode_summary">Исходный режим использует старый маршрут. Proxy first сначала пробует ваши HTTP proxy, затем fallback. Proxy only использует только список proxy.</string>
+    <string name="route_starting">Запуск…</string>
+    <string name="route_inactive">Неактивно</string>
 </resources>

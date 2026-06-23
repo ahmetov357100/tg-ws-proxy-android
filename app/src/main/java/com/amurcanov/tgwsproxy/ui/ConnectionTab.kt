@@ -52,7 +52,9 @@ fun ConnectionTab(settingsStore: SettingsStore) {
     val savedBindIp by settingsStore.bindIp.collectAsStateWithLifecycle(initialValue = "127.0.0.1")
     val savedCfEnabled by settingsStore.cfproxyEnabled.collectAsStateWithLifecycle(initialValue = true)
     val savedPoolSize by settingsStore.poolSize.collectAsStateWithLifecycle(initialValue = 4)
+    val savedTransportMode by settingsStore.transportMode.collectAsStateWithLifecycle(initialValue = "default")
     val savedSecretKey by settingsStore.secretKey.collectAsStateWithLifecycle(initialValue = "LOADING")
+    val currentRoute by com.amurcanov.tgwsproxy.LogManager.currentRoute.collectAsStateWithLifecycle()
 
     val scope = rememberCoroutineScope()
     val currentVersion = remember { "v${BuildConfig.VERSION_NAME.removePrefix("v")}" }
@@ -102,6 +104,18 @@ fun ConnectionTab(settingsStore: SettingsStore) {
     }
     val bindIp = savedBindIp.trim().takeIf { it.isNotEmpty() } ?: "127.0.0.1"
     val proxyUrl = "https://t.me/proxy?server=$bindIp&port=$port&secret=dd$secretForUrl"
+    val modeLabel = remember(savedTransportMode) {
+        when (savedTransportMode) {
+            "http_proxy_first" -> "Proxy first"
+            "http_proxy_only" -> "Proxy only"
+            else -> "Original"
+        }
+    }
+    val routeLabel = when {
+        isStarting -> stringResource(R.string.route_starting)
+        !isRunning -> stringResource(R.string.route_inactive)
+        else -> currentRoute
+    }
     
     var applyMode by rememberSaveable { mutableStateOf("packages") }
 
@@ -250,6 +264,8 @@ fun ConnectionTab(settingsStore: SettingsStore) {
                         }
 
                         ProxyStatusPanel(
+                            modeLabel = modeLabel,
+                            routeLabel = routeLabel,
                             cfEnabled = savedCfEnabled,
                             poolSize = savedPoolSize,
                             port = savedPort,
@@ -299,6 +315,8 @@ fun ConnectionTab(settingsStore: SettingsStore) {
 
 @Composable
 private fun ProxyStatusPanel(
+    modeLabel: String,
+    routeLabel: String,
     cfEnabled: Boolean,
     poolSize: Int,
     port: String,
@@ -318,30 +336,44 @@ private fun ProxyStatusPanel(
             verticalAlignment = Alignment.CenterVertically
         ) {
             ProxyStatusItem(
-                text = if (cfEnabled) "CF" else stringResource(R.string.direct_mode),
+                text = modeLabel,
                 modifier = Modifier
                     .weight(0.9f)
                     .padding(horizontal = 6.dp, vertical = 8.dp)
             )
             ProxyStatusDivider()
             ProxyStatusItem(
-                text = stringResource(R.string.pool_short, poolSize),
+                text = routeLabel,
                 modifier = Modifier
                     .weight(1.05f)
                     .padding(horizontal = 6.dp, vertical = 8.dp)
             )
             ProxyStatusDivider()
             ProxyStatusItem(
-                text = stringResource(R.string.port_short, port),
+                text = if (cfEnabled) "CF ON" else stringResource(R.string.direct_mode),
                 modifier = Modifier
                     .weight(1.35f)
                     .padding(horizontal = 6.dp, vertical = 8.dp)
             )
             ProxyStatusDivider()
             ProxyStatusItem(
-                text = version,
+                text = stringResource(R.string.pool_short, poolSize),
                 modifier = Modifier
                     .weight(1.1f)
+                    .padding(horizontal = 6.dp, vertical = 8.dp)
+            )
+            ProxyStatusDivider()
+            ProxyStatusItem(
+                text = stringResource(R.string.port_short, port),
+                modifier = Modifier
+                    .weight(1.2f)
+                    .padding(horizontal = 6.dp, vertical = 8.dp)
+            )
+            ProxyStatusDivider()
+            ProxyStatusItem(
+                text = version,
+                modifier = Modifier
+                    .weight(0.95f)
                     .padding(horizontal = 6.dp, vertical = 8.dp)
             )
         }

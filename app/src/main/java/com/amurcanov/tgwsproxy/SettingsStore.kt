@@ -39,6 +39,7 @@ class SettingsStore(private val context: Context) {
         val PORT = stringPreferencesKey("port")
         val BIND_IP = stringPreferencesKey("bind_ip")
         val POOL_SIZE = intPreferencesKey("pool_size")
+        val TRANSPORT_MODE = stringPreferencesKey("transport_mode")
         val CFPROXY_ENABLED = booleanPreferencesKey("cfproxy_enabled")
         val CUSTOM_CF_DOMAIN_ENABLED = booleanPreferencesKey("custom_cf_domain_enabled")
         val CUSTOM_CF_DOMAIN = stringPreferencesKey("custom_cf_domain")
@@ -86,6 +87,7 @@ class SettingsStore(private val context: Context) {
     val port: Flow<String> = context.dataStore.data.map { it[Keys.PORT] ?: "1443" }
     val bindIp: Flow<String> = context.dataStore.data.map { it[Keys.BIND_IP] ?: "127.0.0.1" }
     val poolSize: Flow<Int> = context.dataStore.data.map { it[Keys.POOL_SIZE] ?: 4 }
+    val transportMode: Flow<String> = context.dataStore.data.map { it[Keys.TRANSPORT_MODE] ?: "default" }
     val cfproxyEnabled: Flow<Boolean> = context.dataStore.data.map { it[Keys.CFPROXY_ENABLED] ?: true }
     val customCfDomainEnabled: Flow<Boolean> = context.dataStore.data.map { it[Keys.CUSTOM_CF_DOMAIN_ENABLED] ?: false }
     val customCfDomain: Flow<String> = context.dataStore.data.map { it[Keys.CUSTOM_CF_DOMAIN] ?: "" }
@@ -154,6 +156,10 @@ class SettingsStore(private val context: Context) {
 
     suspend fun saveHttpProxyListJson(value: String) {
         context.dataStore.edit { it[Keys.HTTP_PROXY_LIST_JSON] = value }
+    }
+
+    suspend fun saveTransportMode(value: String) {
+        context.dataStore.edit { it[Keys.TRANSPORT_MODE] = value }
     }
 
     suspend fun saveUpdatePostpone(version: String, until: Long) {
@@ -236,6 +242,7 @@ class SettingsStore(private val context: Context) {
     suspend fun saveAll(isDcAuto: Boolean, dc1: String, dc2: String, dc3: String, dc4: String, dc5: String, dc203: String,
                         dc1m: String, dc2m: String, dc3m: String, dc4m: String, dc5m: String, dc203m: String,
                         isExperimental: Boolean, bindIp: String, port: String, poolSize: Int,
+                        transportMode: String,
                         cfproxyEnabled: Boolean, customCfDomainEnabled: Boolean, customCfDomain: String,
                         httpProxyListJson: String, secretKey: String) {
         context.dataStore.edit {
@@ -256,6 +263,7 @@ class SettingsStore(private val context: Context) {
             it[Keys.BIND_IP] = bindIp
             it[Keys.PORT] = port
             it[Keys.POOL_SIZE] = poolSize
+            it[Keys.TRANSPORT_MODE] = transportMode
             it[Keys.CFPROXY_ENABLED] = cfproxyEnabled
             it[Keys.CUSTOM_CF_DOMAIN_ENABLED] = customCfDomainEnabled
             it[Keys.CUSTOM_CF_DOMAIN] = customCfDomain
