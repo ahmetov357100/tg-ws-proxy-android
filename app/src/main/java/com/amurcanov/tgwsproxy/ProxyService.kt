@@ -151,9 +151,11 @@ class ProxyService : Service() {
         // Start Go proxy in a separate thread with error handling
         Thread({
             try {
+                val runtimeConfigFile = RuntimeConfig.ensureConfigFile(this)
                 NativeProxy.setPoolSize(poolSize)
                 NativeProxy.setCfProxyCacheDir(cacheDir.absolutePath)
                 NativeProxy.setCfProxyConfig(cfEnabled, cfPriority, cfDomain)
+                NativeProxy.setRuntimeConfigPath(runtimeConfigFile.absolutePath)
                 val result = NativeProxy.startProxy(bindIp, port, ips, secretKey, 1)
                 if (result != 0) {
                     Log.e(TAG, "StartProxy returned error code: $result")

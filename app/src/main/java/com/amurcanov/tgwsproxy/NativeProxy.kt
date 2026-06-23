@@ -14,6 +14,7 @@ interface ProxyLibrary : Library {
     fun SetPoolSize(size: Int)
     fun SetCfProxyCacheDir(cacheDir: String)
     fun SetCfProxyConfig(enabled: Int, priority: Int, userDomain: String)
+    fun SetRuntimeConfigPath(configPath: String)
     fun GetSecretWithPrefix(): Pointer?
     fun GetStats(): Pointer?
     fun FreeString(p: Pointer)
@@ -42,6 +43,10 @@ object NativeProxy {
             if (priority) 1 else 0,
             userDomain
         )
+    }
+
+    fun setRuntimeConfigPath(configPath: String) {
+        ProxyLibrary.INSTANCE.SetRuntimeConfigPath(configPath)
     }
 
     /** Returns the full secret with correct prefix (dd or ee+domain_hex) */

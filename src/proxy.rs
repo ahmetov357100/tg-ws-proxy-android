@@ -3,6 +3,8 @@ use crate::config::*;
 use crate::crypto::*;
 use crate::ws::*;
 use crate::{ldebug, linfo, lwarn};
+use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
+use base64::Engine as _;
 use byteorder::{ByteOrder, LittleEndian};
 use rand::RngCore;
 use sha2::{Digest, Sha256};
@@ -584,6 +586,151 @@ pub async fn tcp_fallback(
     true
 }
 
+async fn http_connect_via_proxy(
+    proxy: &HttpProxyConfig,
+    dst: &str,
+    port: u16,
+) -> Option<TcpStream> {
+    let proxy_addr = format!("{}:{}", proxy.host.trim(), proxy.port);
+    let mut stream =
+        match tokio::time::timeout(Duration::from_secs(10), TcpStream::connect(&proxy_addr)).await
+        {
+            Ok(Ok(s)) => s,
+            _ => return None,
+        };
+
+    let target = format!("{}:{}", dst, port);
+    let mut request = format!(
+        "CONNECT {} HTTP/1.1\r\nHost: {}\r\nProxy-Connection: Keep-Alive\r\n",
+        target, target
+    );
+
+    if !proxy.username.is_empty() || !proxy.password.is_empty() {
+        let auth = format!("{}:{}", proxy.username, proxy.password);
+        let encoded = BASE64_STANDARD.encode(auth.as_bytes());
+        request.push_str(&format!("Proxy-Authorization: Basic {}\r\n", encoded));
+    }
+    request.push_str("\r\n");
+
+    if stream.write_all(request.as_bytes()).await.is_err() {
+        return None;
+    }
+
+    let mut response = Vec::with_capacity(1024);
+    let mut buf = [0u8; 512];
+    loop {
+        let n = match tokio::time::timeout(Duration::from_secs(10), stream.read(&mut buf)).await {
+            Ok(Ok(0)) => return None,
+            Ok(Ok(n)) => n,
+            _ => return None,
+        };
+        response.extend_from_slice(&buf[..n]);
+
+        if response.windows(4).any(|w| w == b"\r\n\r\n") {
+            break;
+        }
+        if response.len() > 8192 {
+            return None;
+        }
+    }
+
+    let header_end = match response.windows(4).position(|w| w == b"\r\n\r\n") {
+        Some(pos) => pos + 4,
+        None => return None,
+    };
+    let headers = String::from_utf8_lossy(&response[..header_end]);
+    let status_line = headers.lines().next().unwrap_or_default();
+    if !status_line.contains(" 200 ") && !status_line.ends_with(" 200") {
+        lwarn!(
+            " HTTP proxy '{}' CONNECT {} failed: {}",
+            proxy.name,
+            target,
+            status_line
+        );
+        return None;
+    }
+
+    Some(stream)
+}
+
+pub async fn tcp_fallback_via_http_proxy(
+    client: TcpStream,
+    dst: &str,
+    port: u16,
+    init: &[u8],
+    label: String,
+    dc: i32,
+    is_media: bool,
+    clt_dec: TrackedStream,
+    clt_enc: TrackedStream,
+    tg_enc: TrackedStream,
+    tg_dec: TrackedStream,
+    cancel_token: CancellationToken,
+) -> bool {
+    let proxies = active_http_proxies();
+    if proxies.is_empty() {
+        lwarn!(" HTTP proxy mode enabled, but no active proxies configured");
+        return false;
+    }
+
+    for proxy in proxies {
+        let proxy_label = if proxy.name.trim().is_empty() {
+            format!("{}:{}", proxy.host, proxy.port)
+        } else {
+            proxy.name.clone()
+        };
+        linfo!(
+            " DC{}{} trying HTTP proxy {} -> {}:{}",
+            dc,
+            media_tag(is_media),
+            proxy_label,
+            dst,
+            port
+        );
+
+        let mut remote = match http_connect_via_proxy(&proxy, dst, port).await {
+            Some(r) => r,
+            None => continue,
+        };
+        let _ = remote.set_nodelay(true);
+
+        STATS.connections_tcp_fallback.fetch_add(1, Ordering::Relaxed);
+        linfo!(
+            " DC{}{} connected via HTTP proxy {}",
+            dc,
+            media_tag(is_media),
+            proxy_label
+        );
+
+        if remote.write_all(init).await.is_err() {
+            lwarn!(
+                " HTTP proxy {} connected, but relay init write failed",
+                proxy_label
+            );
+            continue;
+        }
+
+        bridge_tcp(
+            client,
+            remote,
+            label,
+            dc,
+            dst.to_string(),
+            port,
+            is_media,
+            clt_dec,
+            clt_enc,
+            tg_enc,
+            tg_dec,
+            cancel_token,
+        )
+        .await;
+        return true;
+    }
+
+    false
+}
+
 // ---------------------------------------------------------------------------
 // Cfproxy fallback
 // ---------------------------------------------------------------------------
@@ -747,7 +894,29 @@ pub async fn do_fallback(
     let tg_dec = tg_dec.clone_state();
 
     let fallback_dst = resolve_fallback_target(dc, is_media);
+    let http_proxy_only = transport_mode_is_http_proxy_only();
     let use_cf = CFPROXY_ENABLED.load(Ordering::Relaxed);
+
+    if http_proxy_only {
+        if !fallback_dst.is_empty() {
+            return tcp_fallback_via_http_proxy(
+                conn,
+                &fallback_dst,
+                443,
+                relay_init,
+                label,
+                dc,
+                is_media,
+                clt_dec,
+                clt_enc,
+                tg_enc,
+                tg_dec,
+                cancel_token,
+            )
+            .await;
+        }
+        return false;
+    }
 
     if use_cf {
         // Сначала добываем WS через CF, conn не трогаем.
@@ -965,7 +1134,7 @@ pub async fn handle_client(pool: Arc<WsPool>, mut conn: TcpStream, cancel_token:
 
     let blacklisted = WS_BLACKLIST.read().get(&dc_key).copied().unwrap_or(false);
 
-    if !dc_configured || blacklisted {
+    if transport_mode_is_http_proxy_only() || !dc_configured || blacklisted {
         do_fallback(
             conn,
             &relay_init,

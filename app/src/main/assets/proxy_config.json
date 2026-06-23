@@ -1,0 +1,21 @@
+{
+  "transport_mode": "default",
+  "http_proxies": [
+    {
+      "name": "de-main",
+      "host": "",
+      "port": 3128,
+      "username": "",
+      "password": "",
+      "enabled": false
+    },
+    {
+      "name": "de-backup",
+      "host": "",
+      "port": 3128,
+      "username": "",
+      "password": "",
+      "enabled": false
+    }
+  ]
+}

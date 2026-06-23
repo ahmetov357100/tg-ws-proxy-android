@@ -80,6 +80,7 @@ pub unsafe extern "C" fn StartProxy(
 
     init_logging(is_verbose);
     cfproxy::clear_cfproxy_429_cooldowns();
+    load_runtime_proxy_config();
 
     if secret_str.len() == 32 {
         if hex::decode(&secret_str).is_ok() {
@@ -213,6 +214,14 @@ pub unsafe extern "C" fn SetCfProxyConfig(
         cfg.domains = vec![user_domain.clone()];
         cfg.active = user_domain;
     }
+}
+
+/// # Safety
+/// `c_config_path` — валидная C-строка или null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn SetRuntimeConfigPath(c_config_path: *const c_char) {
+    let path = cstr_to_string(c_config_path);
+    *RUNTIME_CONFIG_PATH.write() = path;
 }
 
 /// # Safety

@@ -1,5 +1,6 @@
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicI32, AtomicI64, Ordering};
 use std::time::{Duration, Instant};
@@ -131,6 +132,101 @@ pub static DC_FAIL_UNTIL: Lazy<RwLock<HashMap<(i32, i32), f64>>> =
     Lazy::new(|| RwLock::new(HashMap::new()));
 
 pub static ZERO64: [u8; 64] = [0u8; 64];
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct HttpProxyConfig {
+    pub name: String,
+    pub host: String,
+    pub port: u16,
+    pub username: String,
+    pub password: String,
+    pub enabled: bool,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct RuntimeProxyConfig {
+    pub transport_mode: String,
+    pub http_proxies: Vec<HttpProxyConfig>,
+}
+
+impl Default for RuntimeProxyConfig {
+    fn default() -> Self {
+        Self {
+            transport_mode: "default".to_string(),
+            http_proxies: Vec::new(),
+        }
+    }
+}
+
+pub static RUNTIME_CONFIG_PATH: Lazy<RwLock<String>> =
+    Lazy::new(|| RwLock::new(String::new()));
+pub static RUNTIME_PROXY_CONFIG: Lazy<RwLock<RuntimeProxyConfig>> =
+    Lazy::new(|| RwLock::new(RuntimeProxyConfig::default()));
+
+pub fn load_runtime_proxy_config() -> bool {
+    let path = RUNTIME_CONFIG_PATH.read().clone();
+    if path.trim().is_empty() {
+        log_warn("runtime proxy config path is empty; using defaults");
+        *RUNTIME_PROXY_CONFIG.write() = RuntimeProxyConfig::default();
+        return false;
+    }
+
+    let raw = match std::fs::read_to_string(&path) {
+        Ok(v) => v,
+        Err(e) => {
+            log_warn(&format!(
+                "failed to read runtime proxy config '{}': {}; using defaults",
+                path, e
+            ));
+            *RUNTIME_PROXY_CONFIG.write() = RuntimeProxyConfig::default();
+            return false;
+        }
+    };
+
+    match serde_json::from_str::<RuntimeProxyConfig>(&raw) {
+        Ok(cfg) => {
+            let enabled_count = cfg.http_proxies.iter().filter(|p| p.enabled).count();
+            *RUNTIME_PROXY_CONFIG.write() = cfg.clone();
+            log_info(&format!(
+                "runtime proxy config loaded: mode='{}', proxies={}, enabled={}",
+                cfg.transport_mode,
+                cfg.http_proxies.len(),
+                enabled_count
+            ));
+            true
+        }
+        Err(e) => {
+            log_error(&format!(
+                "failed to parse runtime proxy config '{}': {}; using defaults",
+                path, e
+            ));
+            *RUNTIME_PROXY_CONFIG.write() = RuntimeProxyConfig::default();
+            false
+        }
+    }
+}
+
+pub fn active_http_proxies() -> Vec<HttpProxyConfig> {
+    RUNTIME_PROXY_CONFIG
+        .read()
+        .http_proxies
+        .iter()
+        .filter(|p| p.enabled && !p.host.trim().is_empty() && p.port > 0)
+        .cloned()
+        .collect()
+}
+
+pub fn transport_mode() -> String {
+    RUNTIME_PROXY_CONFIG
+        .read()
+        .transport_mode
+        .trim()
+        .to_ascii_lowercase()
+}
+
+pub fn transport_mode_is_http_proxy_only() -> bool {
+    transport_mode() == "http_proxy_only"
+}
 
 // ---------------------------------------------------------------------------
 // Stats

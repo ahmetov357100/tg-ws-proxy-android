@@ -1,0 +1,6 @@
+.gradle/
+build/
+target/
+app/build/
+local.properties
+app/src/main/assets/proxy_config.local.json
