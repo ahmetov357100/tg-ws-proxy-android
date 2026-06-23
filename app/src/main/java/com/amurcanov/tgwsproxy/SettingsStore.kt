@@ -11,6 +11,9 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.File
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "proxy_settings")
 
@@ -39,6 +42,7 @@ class SettingsStore(private val context: Context) {
         val CFPROXY_ENABLED = booleanPreferencesKey("cfproxy_enabled")
         val CUSTOM_CF_DOMAIN_ENABLED = booleanPreferencesKey("custom_cf_domain_enabled")
         val CUSTOM_CF_DOMAIN = stringPreferencesKey("custom_cf_domain")
+        val HTTP_PROXY_LIST_JSON = stringPreferencesKey("http_proxy_list_json")
         val AUTO_START_ON_BOOT = booleanPreferencesKey("auto_start_on_boot")
         val SECRET_KEY = stringPreferencesKey("secret_key")
         val LOG_SHOW_DEBUG = booleanPreferencesKey("log_show_debug")
@@ -85,6 +89,7 @@ class SettingsStore(private val context: Context) {
     val cfproxyEnabled: Flow<Boolean> = context.dataStore.data.map { it[Keys.CFPROXY_ENABLED] ?: true }
     val customCfDomainEnabled: Flow<Boolean> = context.dataStore.data.map { it[Keys.CUSTOM_CF_DOMAIN_ENABLED] ?: false }
     val customCfDomain: Flow<String> = context.dataStore.data.map { it[Keys.CUSTOM_CF_DOMAIN] ?: "" }
+    val httpProxyListJson: Flow<String> = context.dataStore.data.map { it[Keys.HTTP_PROXY_LIST_JSON] ?: "[]" }
     val autoStartOnBoot: Flow<Boolean> = context.dataStore.data.map { it[Keys.AUTO_START_ON_BOOT] ?: false }
     val secretKey: Flow<String> = context.dataStore.data.map { it[Keys.SECRET_KEY] ?: "" }
 
@@ -147,6 +152,10 @@ class SettingsStore(private val context: Context) {
         context.dataStore.edit { it[Keys.AUTO_START_ON_BOOT] = enabled }
     }
 
+    suspend fun saveHttpProxyListJson(value: String) {
+        context.dataStore.edit { it[Keys.HTTP_PROXY_LIST_JSON] = value }
+    }
+
     suspend fun saveUpdatePostpone(version: String, until: Long) {
         context.dataStore.edit {
             it[Keys.UPDATE_POSTPONE_VERSION] = version
@@ -186,12 +195,49 @@ class SettingsStore(private val context: Context) {
             it[Keys.DIRECT_DC_DEFAULTS_MIGRATED] = true
             it[Keys.DIRECT_DC_DEFAULTS_V2_MIGRATED] = true
         }
+
+        migrateLegacyHttpProxyList()
+    }
+
+    private suspend fun migrateLegacyHttpProxyList() {
+        context.dataStore.edit {
+            val existing = it[Keys.HTTP_PROXY_LIST_JSON].orEmpty().trim()
+            if (existing.isNotEmpty() && existing != "[]") return@edit
+
+            val runtimeConfigFile = File(context.filesDir, "proxy_config.json")
+            val sourceText = when {
+                runtimeConfigFile.exists() -> runtimeConfigFile.readText()
+                hasAsset("proxy_config.local.json") -> context.assets.open("proxy_config.local.json").bufferedReader().use { reader -> reader.readText() }
+                hasAsset("proxy_config.json") -> context.assets.open("proxy_config.json").bufferedReader().use { reader -> reader.readText() }
+                else -> ""
+            }
+            if (sourceText.isBlank()) return@edit
+
+            val proxies = try {
+                JSONObject(sourceText).optJSONArray("http_proxies") ?: JSONArray()
+            } catch (_: Exception) {
+                JSONArray()
+            }
+            if (proxies.length() > 0) {
+                it[Keys.HTTP_PROXY_LIST_JSON] = proxies.toString()
+            }
+        }
+    }
+
+    private fun hasAsset(name: String): Boolean {
+        return try {
+            context.assets.open(name).close()
+            true
+        } catch (_: Exception) {
+            false
+        }
     }
 
     suspend fun saveAll(isDcAuto: Boolean, dc1: String, dc2: String, dc3: String, dc4: String, dc5: String, dc203: String,
                         dc1m: String, dc2m: String, dc3m: String, dc4m: String, dc5m: String, dc203m: String,
                         isExperimental: Boolean, bindIp: String, port: String, poolSize: Int,
-                        cfproxyEnabled: Boolean, customCfDomainEnabled: Boolean, customCfDomain: String, secretKey: String) {
+                        cfproxyEnabled: Boolean, customCfDomainEnabled: Boolean, customCfDomain: String,
+                        httpProxyListJson: String, secretKey: String) {
         context.dataStore.edit {
             it[Keys.IS_DC_AUTO] = isDcAuto
             it[Keys.DC1] = dc1
@@ -213,6 +259,7 @@ class SettingsStore(private val context: Context) {
             it[Keys.CFPROXY_ENABLED] = cfproxyEnabled
             it[Keys.CUSTOM_CF_DOMAIN_ENABLED] = customCfDomainEnabled
             it[Keys.CUSTOM_CF_DOMAIN] = customCfDomain
+            it[Keys.HTTP_PROXY_LIST_JSON] = httpProxyListJson
             it[Keys.SECRET_KEY] = secretKey
         }
     }

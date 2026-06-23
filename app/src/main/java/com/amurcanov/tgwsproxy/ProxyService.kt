@@ -151,7 +151,7 @@ class ProxyService : Service() {
         // Start Go proxy in a separate thread with error handling
         Thread({
             try {
-                val runtimeConfigFile = RuntimeConfig.ensureConfigFile(this)
+                val runtimeConfigFile = RuntimeConfig.ensureConfigFile(this, SettingsStore(this))
                 NativeProxy.setPoolSize(poolSize)
                 NativeProxy.setCfProxyCacheDir(cacheDir.absolutePath)
                 NativeProxy.setCfProxyConfig(cfEnabled, cfPriority, cfDomain)

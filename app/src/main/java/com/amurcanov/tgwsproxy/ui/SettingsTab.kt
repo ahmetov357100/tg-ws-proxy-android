@@ -14,10 +14,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Layers
@@ -36,6 +39,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.amurcanov.tgwsproxy.ProxyService
+import com.amurcanov.tgwsproxy.HttpProxyEntry
+import com.amurcanov.tgwsproxy.RuntimeConfig
 import com.amurcanov.tgwsproxy.SettingsStore
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -90,6 +95,7 @@ fun SettingsTab(settingsStore: SettingsStore) {
     val savedCfEnabled by settingsStore.cfproxyEnabled.collectAsStateWithLifecycle(initialValue = true)
     val savedCustomDomainEnabled by settingsStore.customCfDomainEnabled.collectAsStateWithLifecycle(initialValue = false)
     val savedCustomDomain by settingsStore.customCfDomain.collectAsStateWithLifecycle(initialValue = "")
+    val savedHttpProxyListJson by settingsStore.httpProxyListJson.collectAsStateWithLifecycle(initialValue = "[]")
     val autoStartOnBoot by settingsStore.autoStartOnBoot.collectAsStateWithLifecycle(initialValue = false)
     val savedSecretKey by settingsStore.secretKey.collectAsStateWithLifecycle(initialValue = "LOADING")
 
@@ -126,6 +132,11 @@ fun SettingsTab(settingsStore: SettingsStore) {
     var customCfDomainEnabled by rememberSaveable(savedCustomDomainEnabled) { mutableStateOf(savedCustomDomainEnabled) }
     var customCfDomain by rememberSaveable(savedCustomDomain) { mutableStateOf(savedCustomDomain) }
     var secretKeyText by remember(savedSecretKey) { mutableStateOf(if (savedSecretKey == "LOADING") "" else savedSecretKey) }
+    val httpProxyEntries = remember(savedHttpProxyListJson) {
+        mutableStateListOf<HttpProxyEntry>().apply {
+            addAll(RuntimeConfig.parseProxyList(savedHttpProxyListJson))
+        }
+    }
 
     LaunchedEffect(savedSecretKey) {
         if (savedSecretKey == "") {
@@ -147,12 +158,14 @@ fun SettingsTab(settingsStore: SettingsStore) {
                 isDcAuto, dc1Text, dc2Text, dc3Text, dc4Text, dc5Text, dc203Text,
                 dc1mText, dc2mText, dc3mText, dc4mText, dc5mText, dc203mText,
                 experimentalMode, bindIpText, portText, selectedPoolSize,
-                cfEnabled, customCfDomainEnabled, customCfDomain, secretKeyText
+                cfEnabled, customCfDomainEnabled, customCfDomain,
+                RuntimeConfig.encodeProxyList(httpProxyEntries), secretKeyText
             )
         }
     }
 
     var showIpSetupDialog by rememberSaveable { mutableStateOf(false) }
+    var showHttpProxyDialog by rememberSaveable { mutableStateOf(false) }
     val scrollState = rememberScrollState()
 
     if (showIpSetupDialog) {
@@ -172,6 +185,18 @@ fun SettingsTab(settingsStore: SettingsStore) {
             dc5mText = dc5mText, onDc5mChange = { dc5mText = it; scheduleSave() },
             dc203mText = dc203mText, onDc203mChange = { dc203mText = it; scheduleSave() },
             onDismiss = { showIpSetupDialog = false }
+        )
+    }
+
+    if (showHttpProxyDialog) {
+        HttpProxyListDialog(
+            proxies = httpProxyEntries,
+            onChange = {
+                httpProxyEntries.clear()
+                httpProxyEntries.addAll(it)
+                scheduleSave()
+            },
+            onDismiss = { showHttpProxyDialog = false }
         )
     }
 
@@ -288,6 +313,49 @@ fun SettingsTab(settingsStore: SettingsStore) {
                         Spacer(Modifier.width(8.dp))
                         Text(stringResource(com.amurcanov.tgwsproxy.R.string.configure_dc_addresses), fontWeight = FontWeight.SemiBold)
                     }
+                }
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.Storage, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Text(
+                        stringResource(com.amurcanov.tgwsproxy.R.string.proxy_servers),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                Text(
+                    if (httpProxyEntries.any { it.enabled && it.host.isNotBlank() && it.port > 0 }) {
+                        stringResource(com.amurcanov.tgwsproxy.R.string.proxy_servers_summary_enabled, httpProxyEntries.count { it.enabled && it.host.isNotBlank() && it.port > 0 })
+                    } else {
+                        stringResource(com.amurcanov.tgwsproxy.R.string.proxy_servers_summary_default)
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                OutlinedButton(
+                    onClick = { showHttpProxyDialog = true },
+                    enabled = !isRunning,
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        contentColor = MaterialTheme.colorScheme.primary,
+                        disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = if (isRunning) 0.2f else 0.5f))
+                ) {
+                    Icon(Icons.Default.Settings, null, Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(com.amurcanov.tgwsproxy.R.string.configure_proxy_servers), fontWeight = FontWeight.SemiBold)
                 }
             }
 
@@ -443,6 +511,178 @@ fun SettingsTab(settingsStore: SettingsStore) {
         }
 
         Spacer(Modifier.height(12.dp))
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HttpProxyListDialog(
+    proxies: List<HttpProxyEntry>,
+    onChange: (List<HttpProxyEntry>) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val items = remember(proxies) { mutableStateListOf<HttpProxyEntry>().apply { addAll(proxies) } }
+
+    fun updateAt(index: Int, transform: (HttpProxyEntry) -> HttpProxyEntry) {
+        items[index] = transform(items[index])
+        onChange(items.toList())
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp,
+            modifier = Modifier
+                .fillMaxWidth(0.95f)
+                .wrapContentHeight()
+                .heightIn(max = 640.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    stringResource(com.amurcanov.tgwsproxy.R.string.proxy_servers),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f, fill = false)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items.forEachIndexed { index, proxy ->
+                        ProxyEditorCard(
+                            proxy = proxy,
+                            onChange = { updated -> updateAt(index) { updated } },
+                            onDelete = {
+                                items.removeAt(index)
+                                onChange(items.toList())
+                            }
+                        )
+                    }
+                }
+
+                OutlinedButton(
+                    onClick = {
+                        items.add(HttpProxyEntry(name = "proxy-${items.size + 1}", port = 3128))
+                        onChange(items.toList())
+                    },
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = RoundedCornerShape(24.dp)
+                ) {
+                    Icon(Icons.Default.Add, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(com.amurcanov.tgwsproxy.R.string.add_proxy_server), fontWeight = FontWeight.SemiBold)
+                }
+
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = RoundedCornerShape(24.dp)
+                ) {
+                    Text(stringResource(com.amurcanov.tgwsproxy.R.string.done), fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProxyEditorCard(
+    proxy: HttpProxyEntry,
+    onChange: (HttpProxyEntry) -> Unit,
+    onDelete: () -> Unit
+) {
+    fun updateName(value: String) = onChange(proxy.copy(name = value))
+    fun updateHost(value: String) = onChange(proxy.copy(host = value.trim()))
+    fun updatePort(value: String) = onChange(proxy.copy(port = value.toIntOrNull() ?: 0))
+    fun updateUsername(value: String) = onChange(proxy.copy(username = value))
+    fun updatePassword(value: String) = onChange(proxy.copy(password = value))
+
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    proxy.name.ifBlank { proxy.host.ifBlank { "proxy" } },
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Switch(
+                        checked = proxy.enabled,
+                        onCheckedChange = { onChange(proxy.copy(enabled = it)) }
+                    )
+                    IconButton(onClick = onDelete) {
+                        Icon(Icons.Default.Delete, null)
+                    }
+                }
+            }
+
+            OutlinedTextField(
+                value = proxy.name,
+                onValueChange = ::updateName,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(com.amurcanov.tgwsproxy.R.string.proxy_name)) },
+                singleLine = true,
+                shape = RoundedCornerShape(20.dp)
+            )
+            OutlinedTextField(
+                value = proxy.host,
+                onValueChange = ::updateHost,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(com.amurcanov.tgwsproxy.R.string.proxy_host)) },
+                singleLine = true,
+                shape = RoundedCornerShape(20.dp)
+            )
+            OutlinedTextField(
+                value = if (proxy.port > 0) proxy.port.toString() else "",
+                onValueChange = { updatePort(it.filter(Char::isDigit).take(5)) },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(com.amurcanov.tgwsproxy.R.string.proxy_port)) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                shape = RoundedCornerShape(20.dp)
+            )
+            OutlinedTextField(
+                value = proxy.username,
+                onValueChange = ::updateUsername,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(com.amurcanov.tgwsproxy.R.string.proxy_username)) },
+                singleLine = true,
+                shape = RoundedCornerShape(20.dp)
+            )
+            OutlinedTextField(
+                value = proxy.password,
+                onValueChange = ::updatePassword,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(com.amurcanov.tgwsproxy.R.string.proxy_password)) },
+                singleLine = true,
+                shape = RoundedCornerShape(20.dp)
+            )
+        }
     }
 }
 

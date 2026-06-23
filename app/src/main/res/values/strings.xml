@@ -22,6 +22,16 @@
     <string name="auto_cf_enabled">Auto (CF enabled)</string>
     <string name="configure_dc_addresses">Configure DC addresses</string>
     <string name="ws_pool">WS pool</string>
+    <string name="proxy_servers">HTTP proxy servers</string>
+    <string name="configure_proxy_servers">Configure proxy servers</string>
+    <string name="proxy_servers_summary_default">No custom proxies enabled. The app uses the original route.</string>
+    <string name="proxy_servers_summary_enabled">%1$d custom proxy servers enabled. They are tried before the original route.</string>
+    <string name="add_proxy_server">Add proxy server</string>
+    <string name="proxy_name">Name</string>
+    <string name="proxy_host">Host or IP</string>
+    <string name="proxy_port">Port</string>
+    <string name="proxy_username">Username</string>
+    <string name="proxy_password">Password</string>
     <string name="secret_key">Secret key</string>
     <string name="autostart">Autostart</string>
     <string name="dc_addresses">Data center addresses</string>

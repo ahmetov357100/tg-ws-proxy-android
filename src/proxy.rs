@@ -653,24 +653,16 @@ async fn http_connect_via_proxy(
     Some(stream)
 }
 
-pub async fn tcp_fallback_via_http_proxy(
-    client: TcpStream,
+async fn connect_http_proxy_remote(
     dst: &str,
     port: u16,
-    init: &[u8],
-    label: String,
     dc: i32,
     is_media: bool,
-    clt_dec: TrackedStream,
-    clt_enc: TrackedStream,
-    tg_enc: TrackedStream,
-    tg_dec: TrackedStream,
-    cancel_token: CancellationToken,
-) -> bool {
+) -> Option<(TcpStream, String)> {
     let proxies = active_http_proxies();
     if proxies.is_empty() {
         lwarn!(" HTTP proxy mode enabled, but no active proxies configured");
-        return false;
+        return None;
     }
 
     for proxy in proxies {
@@ -688,47 +680,22 @@ pub async fn tcp_fallback_via_http_proxy(
             port
         );
 
-        let mut remote = match http_connect_via_proxy(&proxy, dst, port).await {
+        let remote = match http_connect_via_proxy(&proxy, dst, port).await {
             Some(r) => r,
             None => continue,
         };
         let _ = remote.set_nodelay(true);
 
-        STATS.connections_tcp_fallback.fetch_add(1, Ordering::Relaxed);
         linfo!(
             " DC{}{} connected via HTTP proxy {}",
             dc,
             media_tag(is_media),
             proxy_label
         );
-
-        if remote.write_all(init).await.is_err() {
-            lwarn!(
-                " HTTP proxy {} connected, but relay init write failed",
-                proxy_label
-            );
-            continue;
-        }
-
-        bridge_tcp(
-            client,
-            remote,
-            label,
-            dc,
-            dst.to_string(),
-            port,
-            is_media,
-            clt_dec,
-            clt_enc,
-            tg_enc,
-            tg_dec,
-            cancel_token,
-        )
-        .await;
-        return true;
+        return Some((remote, proxy_label));
     }
 
-    false
+    None
 }
 
 // ---------------------------------------------------------------------------
@@ -895,27 +862,41 @@ pub async fn do_fallback(
 
     let fallback_dst = resolve_fallback_target(dc, is_media);
     let http_proxy_only = transport_mode_is_http_proxy_only();
+    let http_proxy_first = transport_mode_prefers_http_proxy();
     let use_cf = CFPROXY_ENABLED.load(Ordering::Relaxed);
 
-    if http_proxy_only {
-        if !fallback_dst.is_empty() {
-            return tcp_fallback_via_http_proxy(
-                conn,
-                &fallback_dst,
-                443,
-                relay_init,
-                label,
-                dc,
-                is_media,
-                clt_dec,
-                clt_enc,
-                tg_enc,
-                tg_dec,
-                cancel_token,
-            )
-            .await;
+    if http_proxy_first && !fallback_dst.is_empty() {
+        if let Some((mut remote, proxy_label)) =
+            connect_http_proxy_remote(&fallback_dst, 443, dc, is_media).await
+        {
+            STATS.connections_tcp_fallback.fetch_add(1, Ordering::Relaxed);
+            if remote.write_all(relay_init).await.is_err() {
+                lwarn!(
+                    " HTTP proxy {} connected, but relay init write failed",
+                    proxy_label
+                );
+            } else {
+                bridge_tcp(
+                    conn,
+                    remote,
+                    label,
+                    dc,
+                    fallback_dst,
+                    443,
+                    is_media,
+                    clt_dec,
+                    clt_enc,
+                    tg_enc,
+                    tg_dec,
+                    cancel_token,
+                )
+                .await;
+                return true;
+            }
         }
-        return false;
+        if http_proxy_only {
+            return false;
+        }
     }
 
     if use_cf {
@@ -1134,7 +1115,7 @@ pub async fn handle_client(pool: Arc<WsPool>, mut conn: TcpStream, cancel_token:
 
     let blacklisted = WS_BLACKLIST.read().get(&dc_key).copied().unwrap_or(false);
 
-    if transport_mode_is_http_proxy_only() || !dc_configured || blacklisted {
+    if transport_mode_prefers_http_proxy() || !dc_configured || blacklisted {
         do_fallback(
             conn,
             &relay_init,

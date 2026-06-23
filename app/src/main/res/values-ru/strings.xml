@@ -126,4 +126,14 @@
     <string name="interval_48h">48 ч</string>
     <string name="interval_never">Никогда</string>
     <string name="interval_hours">%1$d ч</string>
+    <string name="proxy_servers">HTTP proxy серверы</string>
+    <string name="configure_proxy_servers">Настроить proxy серверы</string>
+    <string name="proxy_servers_summary_default">Кастомные proxy не включены. Приложение использует исходный маршрут.</string>
+    <string name="proxy_servers_summary_enabled">Включено custom proxy: %1$d. Они пробуются раньше исходного маршрута.</string>
+    <string name="add_proxy_server">Добавить proxy сервер</string>
+    <string name="proxy_name">Имя</string>
+    <string name="proxy_host">Хост или IP</string>
+    <string name="proxy_port">Порт</string>
+    <string name="proxy_username">Логин</string>
+    <string name="proxy_password">Пароль</string>
 </resources>

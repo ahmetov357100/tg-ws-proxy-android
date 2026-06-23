@@ -228,6 +228,10 @@ pub fn transport_mode_is_http_proxy_only() -> bool {
     transport_mode() == "http_proxy_only"
 }
 
+pub fn transport_mode_prefers_http_proxy() -> bool {
+    matches!(transport_mode().as_str(), "http_proxy_only" | "http_proxy_first")
+}
+
 // ---------------------------------------------------------------------------
 // Stats
 // ---------------------------------------------------------------------------
