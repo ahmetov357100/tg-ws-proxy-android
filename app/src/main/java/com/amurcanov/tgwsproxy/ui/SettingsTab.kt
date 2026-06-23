@@ -356,15 +356,15 @@ fun SettingsTab(settingsStore: SettingsStore) {
                         transportMode = "http_proxy_first"
                         scheduleSave()
                     }
-                    PoolChip(
-                        label = stringResource(com.amurcanov.tgwsproxy.R.string.transport_mode_proxy_only_short),
-                        selected = transportMode == "http_proxy_only",
-                        enabled = !isRunning,
-                        modifier = Modifier.weight(1f).height(48.dp)
-                    ) {
-                        transportMode = "http_proxy_only"
-                        scheduleSave()
-                    }
+                }
+                PoolChip(
+                    label = stringResource(com.amurcanov.tgwsproxy.R.string.transport_mode_proxy_only_short),
+                    selected = transportMode == "http_proxy_only",
+                    enabled = !isRunning,
+                    modifier = Modifier.fillMaxWidth().height(48.dp)
+                ) {
+                    transportMode = "http_proxy_only"
+                    scheduleSave()
                 }
                 Text(
                     stringResource(com.amurcanov.tgwsproxy.R.string.transport_mode_summary),

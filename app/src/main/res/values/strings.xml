@@ -144,4 +144,10 @@
     <string name="interval_hours">%1$d h</string>
     <string name="route_starting">Starting…</string>
     <string name="route_inactive">Inactive</string>
+    <string name="route_label">Route</string>
+    <string name="mode_label">Mode</string>
+    <string name="cf_label">CF</string>
+    <string name="pool_label">Pool</string>
+    <string name="port_label">Port</string>
+    <string name="version_label">Version</string>
 </resources>

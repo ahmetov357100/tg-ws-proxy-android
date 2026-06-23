@@ -144,4 +144,10 @@
     <string name="transport_mode_summary">Исходный режим использует старый маршрут. Proxy first сначала пробует ваши HTTP proxy, затем fallback. Proxy only использует только список proxy.</string>
     <string name="route_starting">Запуск…</string>
     <string name="route_inactive">Неактивно</string>
+    <string name="route_label">Маршрут</string>
+    <string name="mode_label">Режим</string>
+    <string name="cf_label">CF</string>
+    <string name="pool_label">Пул</string>
+    <string name="port_label">Порт</string>
+    <string name="version_label">Версия</string>
 </resources>

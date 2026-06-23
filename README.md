@@ -11,6 +11,19 @@
 </div>
 <br>
 
+## Fork Overview
+
+Android fork of the popular app [amurcanov/tg-ws-proxy-android](https://github.com/amurcanov/tg-ws-proxy-android) — a local MTProto proxy server with Cloudflare or direct proxying for partial workaround of Telegram loading and routing problems.
+
+## Added In This Fork
+
+- Separate Android application package, installable alongside the original app.
+- Support for multiple custom HTTP proxy servers.
+- Transport mode selector: `Original`, `Proxy first`, `Proxy only`.
+- Runtime editor for the proxy server list in Settings.
+- Log timestamps.
+- Visible current route status on the main screen.
+
 **TG WS Proxy Android** — это локальный **MTProto-прокси** для Telegram на Android. Приложение помогает частично решать проблемы и в ряде сценариев ускоряет работу мессенджера, перенаправляя трафик через защищённые CloudFlare WebSocket-соединения или напрямую к датацентрам Telegram.
 
 > [!WARNING]

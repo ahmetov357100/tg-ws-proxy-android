@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -328,87 +329,103 @@ private fun ProxyStatusPanel(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(IntrinsicSize.Min)
-                .padding(horizontal = 4.dp, vertical = 2.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            ProxyStatusItem(
-                text = modeLabel,
-                modifier = Modifier
-                    .weight(0.9f)
-                    .padding(horizontal = 6.dp, vertical = 8.dp)
-            )
-            ProxyStatusDivider()
-            ProxyStatusItem(
-                text = routeLabel,
-                modifier = Modifier
-                    .weight(1.05f)
-                    .padding(horizontal = 6.dp, vertical = 8.dp)
-            )
-            ProxyStatusDivider()
-            ProxyStatusItem(
-                text = if (cfEnabled) "CF ON" else stringResource(R.string.direct_mode),
-                modifier = Modifier
-                    .weight(1.35f)
-                    .padding(horizontal = 6.dp, vertical = 8.dp)
-            )
-            ProxyStatusDivider()
-            ProxyStatusItem(
-                text = stringResource(R.string.pool_short, poolSize),
-                modifier = Modifier
-                    .weight(1.1f)
-                    .padding(horizontal = 6.dp, vertical = 8.dp)
-            )
-            ProxyStatusDivider()
-            ProxyStatusItem(
-                text = stringResource(R.string.port_short, port),
-                modifier = Modifier
-                    .weight(1.2f)
-                    .padding(horizontal = 6.dp, vertical = 8.dp)
-            )
-            ProxyStatusDivider()
-            ProxyStatusItem(
-                text = version,
-                modifier = Modifier
-                    .weight(0.95f)
-                    .padding(horizontal = 6.dp, vertical = 8.dp)
-            )
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.route_label),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = routeLabel,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Monospace
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                ProxyStatusCell(
+                    label = stringResource(R.string.mode_label),
+                    value = modeLabel,
+                    modifier = Modifier.weight(1f)
+                )
+                ProxyStatusCell(
+                    label = stringResource(R.string.cf_label),
+                    value = if (cfEnabled) "ON" else "OFF",
+                    modifier = Modifier.weight(1f)
+                )
+                ProxyStatusCell(
+                    label = stringResource(R.string.pool_label),
+                    value = poolSize.toString(),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                ProxyStatusCell(
+                    label = stringResource(R.string.port_label),
+                    value = port,
+                    modifier = Modifier.weight(1f)
+                )
+                ProxyStatusCell(
+                    label = stringResource(R.string.version_label),
+                    value = version,
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun ProxyStatusItem(
-    text: String,
+private fun ProxyStatusCell(
+    label: String,
+    value: String,
     modifier: Modifier = Modifier,
 ) {
-    Box(
-        modifier = modifier,
-        contentAlignment = Alignment.Center
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+        modifier = modifier
     ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            modifier = Modifier.fillMaxWidth()
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1
+            )
+        }
     }
-}
-
-@Composable
-private fun ProxyStatusDivider() {
-    Box(
-        modifier = Modifier
-            .fillMaxHeight()
-            .width(1.dp)
-            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
-    )
 }
 
 @Composable
